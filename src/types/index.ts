@@ -74,3 +74,13 @@ export interface CursoFormData {
   lng?: number;
   radio: number;
 }
+
+export interface UbicacionFavorita {
+  id: number;
+  nombre: string;
+  lat: number;
+  lng: number;
+  radio: number;
+  createdAt: string;
+  updatedAt: string;
+}
