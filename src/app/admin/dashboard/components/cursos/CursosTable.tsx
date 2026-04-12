@@ -48,7 +48,7 @@ export function CursosTable({
             <TableHead className="text-white">Longitud</TableHead>
             <TableHead className="text-white">Radio (m)</TableHead>
             <TableHead className="text-white">QR</TableHead>
-            <TableHead className="text-white">Acciones</TableHead>
+            <TableHead className="text-white w-[100px]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -89,11 +89,12 @@ export function CursosTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => onViewQR(curso)}
+                            className="border-green-200 text-green-600 hover:bg-green-50"
                           >
-                            <Eye className="h-4 w-4 text-green-600" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent
@@ -109,11 +110,12 @@ export function CursosTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => onEdit(curso)}
+                            className="hover:bg-gray-100"
                           >
-                            <Pencil className="h-4 w-4 text-blue-600" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent
@@ -129,11 +131,12 @@ export function CursosTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => onDelete(curso)}
+                            className="border-red-200 text-red-600 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent

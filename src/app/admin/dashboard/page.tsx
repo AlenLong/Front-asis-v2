@@ -40,7 +40,14 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
+          <TabsList
+            className="mb-6"
+            style={{
+              backgroundColor: user?.cliente?.color
+                ? `${user.cliente.color}20`
+                : undefined,
+            }}
+          >
             <TabsTrigger value="asistencias">Asistencias</TabsTrigger>
             <TabsTrigger value="cursos">Cursos</TabsTrigger>
             <TabsTrigger value="personas">Personas</TabsTrigger>

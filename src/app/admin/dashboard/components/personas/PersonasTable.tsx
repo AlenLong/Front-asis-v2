@@ -11,25 +11,39 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Loader2 } from 'lucide-react';
+import { Pencil, Loader2, Trash2, Eye } from 'lucide-react';
 import { AnimatedSkeleton } from '@/app/admin/dashboard/components/animations/AnimatedSkeleton';
 import { AnimatedButton } from '@/app/admin/dashboard/components/animations/AnimatedButton';
 import { Persona } from '@/types';
 import { UseMutationResult } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 interface PersonasTableProps {
   personas: Persona[];
   isLoading: boolean;
   updateMutation: UseMutationResult<any, any, { id: number; data: Partial<Persona> }, any>;
+  deleteMutation: UseMutationResult<any, any, number, any>;
+  onDeleteClick: (persona: Persona) => void;
   clientColor?: string | null;
+}
+
+function getInscripcionesCount(persona: Persona): number {
+  if (persona._count?.inscripciones !== undefined) {
+    return persona._count.inscripciones;
+  }
+  return persona.inscripciones?.length || 0;
 }
 
 export function PersonasTable({
   personas,
   isLoading,
   updateMutation,
+  deleteMutation,
+  onDeleteClick,
   clientColor,
 }: PersonasTableProps) {
+  const router = useRouter();
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [personaFormData, setPersonaFormData] = useState({
     nombre: '',
@@ -64,6 +78,10 @@ export function PersonasTable({
     );
   };
 
+  const handleViewDetail = (persona: Persona) => {
+    router.push(`/admin/dashboard/personas/${persona.id}`);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
       <Table>
@@ -72,19 +90,20 @@ export function PersonasTable({
             <TableHead className="text-white">Nombre</TableHead>
             <TableHead className="text-white">Apellido</TableHead>
             <TableHead className="text-white">DNI</TableHead>
-            <TableHead className="text-white w-[100px]">Acciones</TableHead>
+            <TableHead className="text-white text-center">Cursos</TableHead>
+            <TableHead className="text-white w-[150px]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={4} className="py-4">
-                <AnimatedSkeleton rows={3} cols={4} />
+              <TableCell colSpan={5} className="py-4">
+                <AnimatedSkeleton rows={3} cols={5} />
               </TableCell>
             </TableRow>
           ) : personas.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                 No hay personas registradas
               </TableCell>
             </TableRow>
@@ -130,6 +149,24 @@ export function PersonasTable({
                     persona.dni
                   )}
                 </TableCell>
+                <TableCell className="text-center">
+                  {editingPersona?.id === persona.id ? (
+                    <span className="text-gray-400">-</span>
+                  ) : (
+                    <Badge
+                      variant={getInscripcionesCount(persona) > 0 ? 'default' : 'secondary'}
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={() => handleViewDetail(persona)}
+                      style={{
+                        backgroundColor: clientColor && getInscripcionesCount(persona) > 0
+                          ? clientColor
+                          : undefined,
+                      }}
+                    >
+                      {getInscripcionesCount(persona)}
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   {editingPersona?.id === persona.id ? (
                     <div className="flex gap-2">
@@ -156,14 +193,32 @@ export function PersonasTable({
                       </AnimatedButton>
                     </div>
                   ) : (
-                    <AnimatedButton
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditClick(persona)}
-                      className="hover:bg-gray-100"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </AnimatedButton>
+                    <div className="flex gap-2">
+                      <AnimatedButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewDetail(persona)}
+                        className="hover:bg-gray-100"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </AnimatedButton>
+                      <AnimatedButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditClick(persona)}
+                        className="hover:bg-gray-100"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </AnimatedButton>
+                      <AnimatedButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onDeleteClick(persona)}
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </AnimatedButton>
+                    </div>
                   )}
                 </TableCell>
               </TableRow>

@@ -1,3 +1,14 @@
+export interface Inscripcion {
+  id: number;
+  cursoId: number;
+  personaId: number;
+  curso: {
+    id: number;
+    nombre: string;
+  };
+  createdAt: string;
+}
+
 export interface Persona {
   id: number;
   nombre: string;
@@ -5,6 +16,10 @@ export interface Persona {
   dni: string;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    inscripciones: number;
+  };
+  inscripciones?: Inscripcion[];
 }
 
 export interface Cliente {

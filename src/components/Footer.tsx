@@ -10,7 +10,7 @@ export function Footer() {
           href="https://australbyte.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-blue-600 hover:underline"
         >
           Australbyte
         </a>

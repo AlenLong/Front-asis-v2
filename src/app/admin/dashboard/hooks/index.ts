@@ -1,4 +1,4 @@
 export { useCursos } from './useCursos';
 export { useAsistencias } from './useAsistencias';
-export { usePersonas } from './usePersonas';
+export { usePersonas, usePersonaDetail } from './usePersonas';
 export { useUbicacionesFavoritas } from './useUbicacionesFavoritas';
