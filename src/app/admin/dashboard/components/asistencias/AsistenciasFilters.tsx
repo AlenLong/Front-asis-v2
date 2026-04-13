@@ -17,8 +17,8 @@ interface AsistenciasFiltersProps {
   cursos: Curso[];
   filterCurso: string;
   setFilterCurso: (value: string) => void;
-  filterDNI: string;
-  setFilterDNI: (value: string) => void;
+  filterBuscar: string;
+  setFilterBuscar: (value: string) => void;
   filterFecha: string;
   setFilterFecha: (value: string) => void;
   onExport: () => void;
@@ -29,8 +29,8 @@ export function AsistenciasFilters({
   cursos,
   filterCurso,
   setFilterCurso,
-  filterDNI,
-  setFilterDNI,
+  filterBuscar,
+  setFilterBuscar,
   filterFecha,
   setFilterFecha,
   onExport,
@@ -65,11 +65,11 @@ export function AsistenciasFilters({
         </div>
 
         <div className="flex-1 min-w-[200px]">
-          <Label>DNI</Label>
+          <Label>Buscar</Label>
           <Input
-            placeholder="Buscar DNI..."
-            value={filterDNI}
-            onChange={(e) => setFilterDNI(e.target.value)}
+            placeholder="Buscar por DNI, nombre o apellido..."
+            value={filterBuscar}
+            onChange={(e) => setFilterBuscar(e.target.value)}
           />
         </div>
 

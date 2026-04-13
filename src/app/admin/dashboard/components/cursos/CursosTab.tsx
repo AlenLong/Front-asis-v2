@@ -11,8 +11,7 @@ import { ViewQRModal } from './cursos-modals/ViewQRModal';
 import { DeleteCursoModal } from './cursos-modals/DeleteCursoModal';
 import { CursosActivosTable } from './CursosActivosTable';
 import { CursosHistoricosTable } from './CursosHistoricosTable';
-import { useCursos, useUbicacionesFavoritas } from '../../hooks';
-import { useCursosActivosQuery, useCursosHistoricosQuery } from '../../hooks/useCursosQueries';
+import { useCursos, useUbicacionesFavoritas, useCursosActivosQuery, useCursosHistoricosQuery } from '../../hooks';
 import { Curso } from '@/types';
 import { Usuario } from '@/types';
 

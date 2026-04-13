@@ -14,7 +14,7 @@ interface AsistenciasTabProps {
 
 export function AsistenciasTab({ cursos, clientColor }: AsistenciasTabProps) {
   const [filterCurso, setFilterCurso] = useState<string>('');
-  const [filterDNI, setFilterDNI] = useState<string>('');
+  const [filterBuscar, setFilterBuscar] = useState<string>('');
   const [filterFecha, setFilterFecha] = useState<string>('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -22,7 +22,7 @@ export function AsistenciasTab({ cursos, clientColor }: AsistenciasTabProps) {
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setPage(1);
-  }, [filterCurso, filterDNI, filterFecha, pageSize]);
+  }, [filterCurso, filterBuscar, filterFecha, pageSize]);
 
   const {
     asistencias,
@@ -30,11 +30,11 @@ export function AsistenciasTab({ cursos, clientColor }: AsistenciasTabProps) {
     totalAsistencias,
     totalPages,
     handleExport,
-  } = useAsistencias(filterCurso, filterDNI, filterFecha, page, pageSize);
+  } = useAsistencias(filterCurso, filterBuscar, filterFecha, page, pageSize);
 
   const handleReset = () => {
     setFilterCurso('');
-    setFilterDNI('');
+    setFilterBuscar('');
     setFilterFecha('');
     setPage(1);
   };
@@ -49,8 +49,8 @@ export function AsistenciasTab({ cursos, clientColor }: AsistenciasTabProps) {
         cursos={cursos}
         filterCurso={filterCurso}
         setFilterCurso={setFilterCurso}
-        filterDNI={filterDNI}
-        setFilterDNI={setFilterDNI}
+        filterBuscar={filterBuscar}
+        setFilterBuscar={setFilterBuscar}
         filterFecha={filterFecha}
         setFilterFecha={setFilterFecha}
         onExport={handleExportClick}

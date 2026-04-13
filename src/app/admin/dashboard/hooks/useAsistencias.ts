@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 interface AsistenciasResponse {
   data: any[];
@@ -14,23 +15,39 @@ interface AsistenciasResponse {
 
 export function useAsistencias(
   filterCurso: string,
-  filterDNI: string,
+  filterBuscar: string,
   filterFecha: string,
   page: number,
   pageSize: number
 ) {
-  const { data: asistenciasData, isLoading: isLoadingAsistencias } = useQuery<AsistenciasResponse>({
-    queryKey: ['asistencias', filterCurso, filterDNI, filterFecha, page, pageSize],
+  // Debounce the search term to avoid API calls on every keystroke
+  const [debouncedBuscar, setDebouncedBuscar] = useState(filterBuscar);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBuscar(filterBuscar);
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timer);
+  }, [filterBuscar]);
+
+  const { data: asistenciasData, isLoading: isLoadingAsistencias, error } = useQuery<AsistenciasResponse>({
+    queryKey: ['asistencias', filterCurso, debouncedBuscar, filterFecha, page, pageSize],
     queryFn: async () => {
       let url = `/asistencia/admin?page=${page}&limit=${pageSize}`;
       if (filterCurso) url += `&cursoId=${filterCurso}`;
-      if (filterDNI) url += `&dni=${filterDNI}`;
-      if (filterFecha) url += `&fecha=${filterFecha}`;
+      if (debouncedBuscar) url += `&buscar=${encodeURIComponent(debouncedBuscar)}`;
       const response = await api.get(url);
       return response.data;
     },
     enabled: !!filterCurso,
   });
+
+  // Show error toast if search fails
+  useEffect(() => {
+    if (error) {
+      toast.error('Error al buscar. El parámetro de búsqueda puede no estar soportado por el backend.');
+    }
+  }, [error]);
 
   const asistencias = asistenciasData?.data || [];
   const totalAsistencias = asistenciasData?.meta?.total || 0;
