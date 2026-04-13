@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 export function useCursos() {
   const queryClient = useQueryClient();
 
+  // Legacy query - fetch all cursos
   const { data: cursos = [], isLoading: isLoadingCursos } = useQuery({
     queryKey: ['cursos'],
     queryFn: async () => {
@@ -71,6 +72,36 @@ export function useCursos() {
     },
   });
 
+  // Close curso (soft-delete)
+  const cerrarCursoMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.post(`/cursos/${id}/cerrar`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Curso cerrado. El QR ha sido eliminado.');
+      queryClient.invalidateQueries({ queryKey: ['cursos'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al cerrar curso');
+    },
+  });
+
+  // Reopen curso (new edition)
+  const reabrirCursoMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.post(`/cursos/${id}/reabrir`);
+      return response.data as Curso;
+    },
+    onSuccess: (data) => {
+      toast.success(`Curso reabierto. Nueva Edición ${data.edicionActual} creada.`);
+      queryClient.invalidateQueries({ queryKey: ['cursos'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al reabrir curso');
+    },
+  });
+
   const regenerateQRMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await api.post(`/cursos/${id}/qr`);
@@ -91,6 +122,8 @@ export function useCursos() {
     createCursoMutation,
     updateCursoMutation,
     deleteCursoMutation,
+    cerrarCursoMutation,
+    reabrirCursoMutation,
     regenerateQRMutation,
   };
 }

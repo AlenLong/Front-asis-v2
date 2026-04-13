@@ -11,7 +11,7 @@ export function usePersonas(enabled: boolean) {
   const { data: personas = [], isLoading: isLoadingPersonas } = useQuery({
     queryKey: ['personas'],
     queryFn: async () => {
-      const response = await api.get('/personas');
+      const response = await api.get('/personas/export');
       const result = response.data.data || response.data;
       return Array.isArray(result) ? result : [];
     },

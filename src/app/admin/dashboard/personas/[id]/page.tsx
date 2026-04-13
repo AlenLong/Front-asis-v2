@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePersonaDetail } from '../../hooks/usePersonas';
 import { PersonaInfo } from './components/PersonaInfo';
 import { InscripcionesSection } from './components/InscripcionesSection';
 import { DeletePersonaModal } from '../../components/personas/DeletePersonaModal';
-import { useState } from 'react';
+import { DashboardHeader } from '../../components/DashboardHeader';
 
 interface PersonaDetailPageProps {
   params: { id: string };
@@ -16,6 +17,7 @@ interface PersonaDetailPageProps {
 
 export default function PersonaDetailPage({ params }: PersonaDetailPageProps) {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const personaId = isNaN(parseInt(params.id)) ? null : parseInt(params.id);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -54,18 +56,7 @@ export default function PersonaDetailPage({ params }: PersonaDetailPageProps) {
     router.push('/admin/dashboard?tab=personas');
   };
 
-  if (!personaId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">ID de persona inválido</p>
-          <Button onClick={handleBack}>Volver al listado</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoadingPersona) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -73,39 +64,70 @@ export default function PersonaDetailPage({ params }: PersonaDetailPageProps) {
     );
   }
 
+  if (!personaId) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <DashboardHeader user={user} onLogout={logout} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">ID de persona inválido</p>
+            <Button onClick={handleBack}>Volver al listado</Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isLoadingPersona) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <DashboardHeader user={user} onLogout={logout} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!persona) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Persona no encontrada</p>
-          <Button onClick={handleBack}>Volver al listado</Button>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardHeader user={user} onLogout={logout} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Persona no encontrada</p>
+            <Button onClick={handleBack}>Volver al listado</Button>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={handleBack}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
-              </Button>
-              <h1 className="text-xl font-semibold">
-                {persona.nombre} {persona.apellido}
-              </h1>
-            </div>
-            <Button variant="destructive" onClick={handleDeleteClick}>
-              Eliminar Persona
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader user={user} onLogout={logout} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white shadow-sm border-b rounded-lg mb-6">
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="outline" onClick={handleBack}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Volver
+                </Button>
+                <h1 className="text-xl font-semibold">
+                  {persona.nombre} {persona.apellido}
+                </h1>
+              </div>
+              <Button variant="destructive" onClick={handleDeleteClick}>
+                Eliminar Persona
+              </Button>
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <PersonaInfo

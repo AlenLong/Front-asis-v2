@@ -63,7 +63,7 @@ export function InscripcionesSection({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Cursos Inscriptos</CardTitle>
-        <Button onClick={handleOpenInscribir} size="sm">
+        <Button onClick={handleOpenInscribir} size="sm" className="bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" />
           Inscribir a curso
         </Button>

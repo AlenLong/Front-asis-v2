@@ -35,6 +35,9 @@ export interface Curso {
   id: number;
   nombre: string;
   activo: boolean;
+  estado: 'activo' | 'finalizado';
+  edicionActual: number;
+  fechaFin: string | null;
   lat: number | null;
   lng: number | null;
   radio: number;
@@ -42,6 +45,10 @@ export interface Curso {
   clienteId: number | null;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    inscripciones: number;
+    asistencias: number;
+  };
 }
 
 export interface Asistencia {

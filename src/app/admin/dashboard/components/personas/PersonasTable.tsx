@@ -11,13 +11,22 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Loader2, Trash2, Eye } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Pencil, Loader2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatedSkeleton } from '@/app/admin/dashboard/components/animations/AnimatedSkeleton';
 import { AnimatedButton } from '@/app/admin/dashboard/components/animations/AnimatedButton';
 import { Persona } from '@/types';
 import { UseMutationResult } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 interface PersonasTableProps {
   personas: Persona[];
@@ -29,6 +38,10 @@ interface PersonasTableProps {
 }
 
 function getInscripcionesCount(persona: Persona): number {
+  // Backend devuelve totalCursos en /personas/export
+  if ((persona as any).totalCursos !== undefined) {
+    return (persona as any).totalCursos;
+  }
   if (persona._count?.inscripciones !== undefined) {
     return persona._count.inscripciones;
   }
@@ -44,12 +57,20 @@ export function PersonasTable({
   clientColor,
 }: PersonasTableProps) {
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [personaFormData, setPersonaFormData] = useState({
     nombre: '',
     apellido: '',
     dni: '',
   });
+
+  const totalPersonas = personas.length;
+  const totalPages = Math.ceil(totalPersonas / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedPersonas = personas.slice(startIndex, endIndex);
 
   const handleEditClick = (persona: Persona) => {
     setEditingPersona(persona);
@@ -108,7 +129,7 @@ export function PersonasTable({
               </TableCell>
             </TableRow>
           ) : (
-            personas.map((persona: Persona) => (
+            paginatedPersonas.map((persona) => (
               <TableRow key={persona.id}>
                 <TableCell>
                   {editingPersona?.id === persona.id ? (
@@ -226,6 +247,55 @@ export function PersonasTable({
           )}
         </TableBody>
       </Table>
+
+      {!isLoading && totalPersonas > 0 && (
+        <div className="flex items-center justify-between px-4 py-4 border-t">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Mostrar:</span>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={(v) => {
+                setPageSize(parseInt(v));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-gray-500">Total: {totalPersonas}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm text-gray-600">
+              Página {page} de {totalPages || 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
