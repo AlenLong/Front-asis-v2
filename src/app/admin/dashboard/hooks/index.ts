@@ -8,3 +8,4 @@ export {
   usePersonasActivasQuery,
   usePersonasHistoricoQuery,
 } from './usePersonasQueries';
+export { useAutoInscripciones } from './useAutoInscripciones';

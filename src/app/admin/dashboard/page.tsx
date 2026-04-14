@@ -10,6 +10,7 @@ import { DashboardHeader } from './components/DashboardHeader';
 import { AsistenciasTab } from './components/asistencias/AsistenciasTab';
 import { CursosTab } from './components/cursos/CursosTab';
 import { PersonasTab } from './components/personas/PersonasTab';
+import { AutoInscripcionesTab } from './components/auto-inscripciones/AutoInscripcionesTab';
 import { useCursos } from './hooks/useCursos';
 
 export default function DashboardPage() {
@@ -23,7 +24,7 @@ export default function DashboardPage() {
   // Read tab from URL query parameter
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && ['asistencias', 'cursos', 'personas'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['asistencias', 'cursos', 'personas', 'auto-inscripciones'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
@@ -60,6 +61,7 @@ export default function DashboardPage() {
             <TabsTrigger value="asistencias">Asistencias</TabsTrigger>
             <TabsTrigger value="cursos">Cursos</TabsTrigger>
             <TabsTrigger value="personas">Personas</TabsTrigger>
+            <TabsTrigger value="auto-inscripciones">Auto-Inscripciones</TabsTrigger>
           </TabsList>
 
           <AnimatePresence mode="wait">
@@ -77,6 +79,9 @@ export default function DashboardPage() {
               {activeTab === 'cursos' && <CursosTab user={user} />}
               {activeTab === 'personas' && (
                 <PersonasTab isActive={true} clientColor={user?.cliente?.color} />
+              )}
+              {activeTab === 'auto-inscripciones' && (
+                <AutoInscripcionesTab cursos={cursos} clientColor={user?.cliente?.color} />
               )}
             </motion.div>
           </AnimatePresence>

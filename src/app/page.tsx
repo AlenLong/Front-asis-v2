@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, GraduationCap } from 'lucide-react';
+import { AutoInscripcionModal } from '@/components/modals/AutoInscripcionModal';
 
 const asistenciaSchema = z.object({
   nombre: z.string().min(2, 'El nombre es requerido'),
@@ -33,6 +34,10 @@ export default function HomePage() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAutoInscripcionModal, setShowAutoInscripcionModal] = useState(false);
+  const [autoInscripcionCursoNombre, setAutoInscripcionCursoNombre] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [wasAutoInscribed, setWasAutoInscribed] = useState(false);
 
   const {
     register,
@@ -84,7 +89,7 @@ export default function HomePage() {
         console.log('Geolocalización no disponible');
       }
 
-      await api.post('/asistencia', {
+      const response = await api.post('/asistencia', {
         nombre: data.nombre,
         apellido: data.apellido,
         dni: data.dni,
@@ -94,7 +99,17 @@ export default function HomePage() {
       });
 
       toast.success('Asistencia registrada correctamente');
-      reset();
+
+      // Check if auto-inscription occurred
+      const autoInscrito = response.data?.fueAutoInscrito === true;
+      if (autoInscrito) {
+        const cursoNombre = response.data.curso?.nombre || 'Curso';
+        setAutoInscripcionCursoNombre(cursoNombre);
+        setWasAutoInscribed(true);
+        setShowAutoInscripcionModal(true);
+      }
+
+      setShowSuccess(true);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al registrar asistencia');
     } finally {
@@ -107,11 +122,12 @@ export default function HomePage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-gray-800">
-            Registro de Asistencia
+            {showSuccess ? '¡Registro Exitoso!' : 'Registro de Asistencia'}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {!showSuccess ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre</Label>
               <Input
@@ -186,8 +202,49 @@ export default function HomePage() {
               )}
             </Button>
           </form>
+          ) : (
+            <div className="space-y-6 text-center">
+              <div className="flex justify-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-12 h-12 text-green-600" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-lg text-gray-700">
+                  ¡Gracias por registrar tu asistencia!
+                </p>
+                <p className="text-sm text-gray-500">
+                  Éxitos en tus estudios
+                </p>
+              </div>
+
+              {wasAutoInscribed && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+                  <div className="flex items-start gap-2">
+                    <GraduationCap className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium">
+                        Se te inscribió automáticamente en: {autoInscripcionCursoNombre}
+                      </p>
+                      <p className="mt-1">
+                        ⚠️ Al finalizar la clase, informa al administrativo que fuiste inscrito automáticamente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <AutoInscripcionModal
+        isOpen={showAutoInscripcionModal}
+        onClose={() => setShowAutoInscripcionModal(false)}
+        cursoNombre={autoInscripcionCursoNombre}
+      />
     </div>
   );
 }
