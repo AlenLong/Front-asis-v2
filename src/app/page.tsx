@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Curso } from '@/types';
+import { Curso, CursoPublico } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle2, GraduationCap } from 'lucide-react';
+import { Loader2, CheckCircle2, GraduationCap, MapPin } from 'lucide-react';
 import { AutoInscripcionModal } from '@/components/modals/AutoInscripcionModal';
 
 const asistenciaSchema = z.object({
@@ -31,7 +32,17 @@ const asistenciaSchema = z.object({
 type AsistenciaForm = z.infer<typeof asistenciaSchema>;
 
 export default function HomePage() {
+  const searchParams = useSearchParams();
+  const cursoIdFromQR = searchParams.get('cursoId');
+  const edicionFromQR = searchParams.get('edicion');
+
   const [cursos, setCursos] = useState<Curso[]>([]);
+  const [cursoFromQR, setCursoFromQR] = useState<CursoPublico | null>(null);
+  const [loadingCursoQR, setLoadingCursoQR] = useState(false);
+  const [errorCursoQR, setErrorCursoQR] = useState<string | null>(null);
+  const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
+  const [ubicacionError, setUbicacionError] = useState<string | null>(null);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAutoInscripcionModal, setShowAutoInscripcionModal] = useState(false);
@@ -50,7 +61,54 @@ export default function HomePage() {
     resolver: zodResolver(asistenciaSchema),
   });
 
+  // Cargar curso desde QR si existe
   useEffect(() => {
+    if (cursoIdFromQR) {
+      setLoadingCursoQR(true);
+      api.get(`/cursos/${cursoIdFromQR}/publico`)
+        .then(response => {
+          const cursoData: CursoPublico = response.data;
+          setCursoFromQR(cursoData);
+          // Pre-seleccionar el curso en el formulario
+          setValue('cursoId', cursoData.id.toString());
+          setErrorCursoQR(null);
+          
+          // Si requiere GPS, obtener ubicación
+          if (cursoData.requiereGPS) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setUbicacion({
+                  lat: pos.coords.latitude,
+                  lng: pos.coords.longitude
+                });
+                setUbicacionError(null);
+              },
+              (err) => {
+                console.error('Error GPS:', err);
+                setUbicacionError('No se pudo obtener ubicación. Asegurate de estar al aire libre.');
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+              }
+            );
+          }
+        })
+        .catch(() => {
+          setErrorCursoQR('No se pudo cargar el curso desde el QR. Selecciona un curso manualmente.');
+        })
+        .finally(() => {
+          setLoadingCursoQR(false);
+        });
+    }
+  }, [cursoIdFromQR, setValue]);
+
+  // Cargar lista de cursos para el selector (cuando no hay QR o como fallback)
+  useEffect(() => {
+    // Si viene desde QR, no necesitamos cargar todos los cursos
+    if (cursoIdFromQR) return;
+    
     const fetchCursos = async () => {
       try {
         setIsLoading(true);
@@ -64,29 +122,32 @@ export default function HomePage() {
     };
 
     fetchCursos();
-  }, []);
+  }, [cursoIdFromQR]);
 
   const onSubmit = async (data: AsistenciaForm) => {
     setIsSubmitting(true);
     
     try {
-      // Obtener geolocalización
-      let lat: number | undefined;
-      let lng: number | undefined;
+      // Usar ubicación del GPS si el curso la requiere
+      let lat = ubicacion?.lat;
+      let lng = ubicacion?.lng;
       
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0,
+      // Si no hay ubicación del QR y no es requerida, intentar obtenerla
+      if (!lat && !cursoFromQR?.requiereGPS) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            });
           });
-        });
-        lat = position.coords.latitude;
-        lng = position.coords.longitude;
-      } catch {
-        // Si no hay geolocalización, continuamos sin ella
-        console.log('Geolocalización no disponible');
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+        } catch (err) {
+          console.error('Error GPS:', err);
+          // No bloquear el formulario si falla
+        }
       }
 
       const response = await api.post('/asistencia', {
@@ -94,6 +155,7 @@ export default function HomePage() {
         apellido: data.apellido,
         dni: data.dni,
         cursoId: parseInt(data.cursoId),
+        edicion: edicionFromQR ? parseInt(edicionFromQR) : undefined,
         lat,
         lng,
       });
@@ -117,6 +179,22 @@ export default function HomePage() {
     }
   };
 
+  // Si hay error crítico del QR (curso no encontrado), mostrar error
+  if (errorCursoQR && !cursoFromQR && cursoIdFromQR) {
+    return (
+      <div className="flex-1 gradient-bg flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardContent className="pt-6">
+            <div className="text-red-500 text-center">
+              <p className="font-medium">{errorCursoQR}</p>
+              <p className="text-sm text-gray-500 mt-2">Intenta escanear el QR nuevamente o contacta al administrador.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 gradient-bg flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl">
@@ -128,70 +206,98 @@ export default function HomePage() {
         <CardContent>
           {!showSuccess ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                id="nombre"
-                {...register('nombre')}
-                placeholder="Tu nombre"
-              />
-              {errors.nombre && (
-                <p className="text-sm text-red-500">{errors.nombre.message}</p>
+              {/* Info del curso desde QR */}
+              {cursoFromQR && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="font-medium text-blue-800">{cursoFromQR.nombre}</p>
+                  {!cursoFromQR.activo && (
+                    <p className="text-red-500 text-sm mt-1">⚠️ Este curso no está activo</p>
+                  )}
+                </div>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="apellido">Apellido</Label>
-              <Input
-                id="apellido"
-                {...register('apellido')}
-                placeholder="Tu apellido"
-              />
-              {errors.apellido && (
-                <p className="text-sm text-red-500">{errors.apellido.message}</p>
+              
+              {/* Estado GPS */}
+              {cursoFromQR?.requiereGPS && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4" />
+                  {ubicacion ? (
+                    <span className="text-green-600">✓ Ubicación obtenida</span>
+                  ) : (
+                    <span className="text-amber-600">Obteniendo ubicación GPS...</span>
+                  )}
+                </div>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dni">DNI</Label>
-              <Input
-                id="dni"
-                {...register('dni')}
-                placeholder="Tu DNI"
-              />
-              {errors.dni && (
-                <p className="text-sm text-red-500">{errors.dni.message}</p>
+              {ubicacionError && (
+                <p className="text-sm text-red-500">{ubicacionError}</p>
               )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="curso">Curso</Label>
-              <Select
-                disabled={isLoading}
-                value={watch('cursoId')}
-                onValueChange={(value) => setValue('cursoId', value)}
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input
+                  id="nombre"
+                  {...register('nombre')}
+                  placeholder="Tu nombre"
+                />
+                {errors.nombre && (
+                  <p className="text-sm text-red-500">{errors.nombre.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apellido">Apellido</Label>
+                <Input
+                  id="apellido"
+                  {...register('apellido')}
+                  placeholder="Tu apellido"
+                />
+                {errors.apellido && (
+                  <p className="text-sm text-red-500">{errors.apellido.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dni">DNI</Label>
+                <Input
+                  id="dni"
+                  {...register('dni')}
+                  placeholder="Tu DNI"
+                />
+                {errors.dni && (
+                  <p className="text-sm text-red-500">{errors.dni.message}</p>
+                )}
+              </div>
+
+              {/* Selector de curso - oculto si viene del QR */}
+              {!cursoIdFromQR && (
+                <div className="space-y-2">
+                  <Label htmlFor="curso">Curso</Label>
+                  <Select
+                    disabled={isLoading}
+                    value={watch('cursoId')}
+                    onValueChange={(value) => setValue('cursoId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoading ? 'Cargando cursos...' : 'Selecciona un curso'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cursos.map((curso) => (
+                        <SelectItem key={curso.id} value={curso.id.toString()}>
+                          {curso.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.cursoId && (
+                    <p className="text-sm text-red-500">{errors.cursoId.message}</p>
+                  )}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full gradient-bg hover:opacity-90"
+                disabled={isSubmitting || (cursoFromQR?.requiereGPS && !ubicacion)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoading ? 'Cargando cursos...' : 'Selecciona un curso'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {cursos.map((curso) => (
-                    <SelectItem key={curso.id} value={curso.id.toString()}>
-                      {curso.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.cursoId && (
-                <p className="text-sm text-red-500">{errors.cursoId.message}</p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full gradient-bg hover:opacity-90"
-              disabled={isSubmitting}
-            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

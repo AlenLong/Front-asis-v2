@@ -51,6 +51,14 @@ export interface Curso {
   };
 }
 
+export interface CursoPublico {
+  id: number;
+  nombre: string;
+  activo: boolean;
+  edicionActual: number;
+  requiereGPS: boolean;
+}
+
 export interface Asistencia {
   id: number;
   personaId: number;
@@ -86,6 +94,7 @@ export interface AsistenciaFormData {
   apellido: string;
   dni: string;
   cursoId: number;
+  edicion?: number;
   lat?: number;
   lng?: number;
 }
