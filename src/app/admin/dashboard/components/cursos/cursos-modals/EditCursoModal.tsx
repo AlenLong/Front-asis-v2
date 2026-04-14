@@ -11,16 +11,26 @@ import {
 import { AnimatedButton } from '@/app/admin/dashboard/components/animations/AnimatedButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { Curso } from '@/types';
+import { Loader2, MapPin } from 'lucide-react';
+import { Curso, UbicacionFavorita } from '@/types';
 import { UseMutationResult } from '@tanstack/react-query';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EditCursoModalProps {
   isOpen: boolean;
   onClose: () => void;
   curso: Curso | null;
-  updateMutation: UseMutationResult<any, any, { id: number; nombre: string; lat?: number; lng?: number; radio: number }, any>;
+  updateMutation: UseMutationResult<any, any, { id: number; nombre: string; lat?: number; lng?: number; radio: number; ubicacionFavoritaId?: number }, any>;
   regenerateMutation: UseMutationResult<any, any, number, any>;
+  ubicaciones: UbicacionFavorita[];
+  isLoadingUbicaciones: boolean;
 }
 
 export function EditCursoModal({
@@ -29,13 +39,18 @@ export function EditCursoModal({
   curso,
   updateMutation,
   regenerateMutation,
+  ubicaciones,
+  isLoadingUbicaciones,
 }: EditCursoModalProps) {
   const [formData, setFormData] = useState({
     nombre: '',
     lat: '',
     lng: '',
     radio: '100',
+    ubicacionFavoritaId: '',
   });
+
+  const [useUbicacionFavorita, setUseUbicacionFavorita] = useState(false);
 
   useEffect(() => {
     if (curso) {
@@ -44,27 +59,47 @@ export function EditCursoModal({
         lat: curso.lat?.toString() || '',
         lng: curso.lng?.toString() || '',
         radio: curso.radio.toString(),
+        ubicacionFavoritaId: '',
       });
+      setUseUbicacionFavorita(false);
     }
   }, [curso]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!curso) return;
-    updateMutation.mutate(
-      {
-        id: curso.id,
-        nombre: formData.nombre,
-        lat: formData.lat ? parseFloat(formData.lat) : undefined,
-        lng: formData.lng ? parseFloat(formData.lng) : undefined,
-        radio: parseInt(formData.radio) || 100,
+
+    const payload: any = {
+      id: curso.id,
+      nombre: formData.nombre,
+      radio: parseInt(formData.radio) || 100,
+    };
+
+    if (useUbicacionFavorita && formData.ubicacionFavoritaId) {
+      payload.ubicacionFavoritaId = parseInt(formData.ubicacionFavoritaId);
+    } else {
+      payload.lat = formData.lat ? parseFloat(formData.lat) : undefined;
+      payload.lng = formData.lng ? parseFloat(formData.lng) : undefined;
+    }
+
+    updateMutation.mutate(payload, {
+      onSuccess: () => {
+        onClose();
       },
-      {
-        onSuccess: () => {
-          onClose();
-        },
-      }
-    );
+    });
+  };
+
+  const handleUbicacionChange = (value: string) => {
+    const ubicacion = ubicaciones.find((u) => u.id.toString() === value);
+    if (ubicacion) {
+      setFormData({
+        ...formData,
+        ubicacionFavoritaId: value,
+        lat: ubicacion.lat.toString(),
+        lng: ubicacion.lng.toString(),
+        radio: ubicacion.radio.toString(),
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -86,26 +121,77 @@ export function EditCursoModal({
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          {/* Selector de Ubicación Favorita */}
+          {ubicaciones.length > 0 && (
             <div className="space-y-2">
-              <Label>Latitud</Label>
-              <Input
-                type="number"
-                step="any"
-                value={formData.lat}
-                onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-              />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="useUbicacionFavorita"
+                  checked={useUbicacionFavorita}
+                  onCheckedChange={(checked) => {
+                    setUseUbicacionFavorita(checked as boolean);
+                    if (!checked) {
+                      setFormData({ ...formData, ubicacionFavoritaId: '' });
+                    }
+                  }}
+                />
+                <Label htmlFor="useUbicacionFavorita" className="cursor-pointer">
+                  Usar ubicación guardada
+                </Label>
+              </div>
+
+              {useUbicacionFavorita && (
+                <Select
+                  value={formData.ubicacionFavoritaId}
+                  onValueChange={handleUbicacionChange}
+                  disabled={isLoadingUbicaciones}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar ubicación..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ubicaciones.map((ubicacion) => (
+                      <SelectItem key={ubicacion.id} value={ubicacion.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span>{ubicacion.nombre}</span>
+                          <span className="text-xs text-gray-400">
+                            ({ubicacion.lat.toFixed(4)}, {ubicacion.lng.toFixed(4)})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label>Longitud</Label>
-              <Input
-                type="number"
-                step="any"
-                value={formData.lng}
-                onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-              />
+          )}
+
+          {/* Coordenadas manuales (solo si no usa ubicación favorita) */}
+          {!useUbicacionFavorita && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Latitud</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.lat}
+                  onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Longitud</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.lng}
+                  onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
+          )}
+
           <div className="space-y-2">
             <Label>Radio (metros) *</Label>
             <Input
@@ -114,6 +200,7 @@ export function EditCursoModal({
               value={formData.radio}
               onChange={(e) => setFormData({ ...formData, radio: e.target.value })}
               required
+              disabled={useUbicacionFavorita}
             />
           </div>
           {curso && (

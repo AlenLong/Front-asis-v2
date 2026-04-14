@@ -41,18 +41,24 @@ export function useCursos() {
   });
 
   const updateCursoMutation = useMutation({
-    mutationFn: async (data: { id: number; nombre: string; lat?: number; lng?: number; radio: number }) => {
-      const response = await api.put(`/cursos/${data.id}`, {
+    mutationFn: async (data: { id: number; nombre: string; lat?: number; lng?: number; radio: number; ubicacionFavoritaId?: number }) => {
+      const payload: any = {
         nombre: data.nombre,
         lat: data.lat,
         lng: data.lng,
         radio: data.radio,
-      });
+      };
+      if (data.ubicacionFavoritaId) {
+        payload.ubicacionFavoritaId = data.ubicacionFavoritaId;
+      }
+      const response = await api.put(`/cursos/${data.id}`, payload);
       return response.data;
     },
     onSuccess: () => {
       toast.success('Curso actualizado correctamente');
       queryClient.invalidateQueries({ queryKey: ['cursos'] });
+      queryClient.invalidateQueries({ queryKey: ['cursos', 'activos'] });
+      queryClient.invalidateQueries({ queryKey: ['cursos', 'historicos'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al actualizar curso');

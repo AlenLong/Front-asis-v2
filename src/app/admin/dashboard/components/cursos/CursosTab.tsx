@@ -155,6 +155,8 @@ export function CursosTab({ user }: CursosTabProps) {
         curso={selectedCurso}
         updateMutation={updateCursoMutation}
         regenerateMutation={regenerateQRMutation}
+        ubicaciones={ubicaciones}
+        isLoadingUbicaciones={isLoadingUbicaciones}
       />
 
       <ViewQRModal
