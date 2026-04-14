@@ -114,7 +114,6 @@ export function useCursos() {
       return response.data;
     },
     onSuccess: () => {
-      toast.success('QR regenerado correctamente');
       queryClient.invalidateQueries({ queryKey: ['cursos'] });
     },
     onError: (error: any) => {

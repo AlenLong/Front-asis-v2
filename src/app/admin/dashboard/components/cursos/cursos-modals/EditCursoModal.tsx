@@ -12,6 +12,7 @@ import { AnimatedButton } from '@/app/admin/dashboard/components/animations/Anim
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import { Curso, UbicacionFavorita } from '@/types';
 import { UseMutationResult } from '@tanstack/react-query';
 import {
@@ -106,9 +107,15 @@ export function EditCursoModal({
     onClose();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 duration-500">
         <DialogHeader>
           <DialogTitle>Editar Curso</DialogTitle>
         </DialogHeader>
@@ -215,7 +222,16 @@ export function EditCursoModal({
                 <AnimatedButton
                   type="button"
                   variant="outline"
-                  onClick={() => regenerateMutation.mutate(curso.id)}
+                  onClick={() => {
+                    regenerateMutation.mutate(curso.id, {
+                      onSuccess: () => {
+                        toast.success('QR regenerado exitosamente');
+                        setTimeout(() => {
+                          onClose();
+                        }, 800);
+                      },
+                    });
+                  }}
                   disabled={regenerateMutation.isPending}
                   className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
                 >

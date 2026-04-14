@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle2, GraduationCap, MapPin } from 'lucide-react';
+import { Loader2, CheckCircle2, GraduationCap, MapPin, RefreshCw } from 'lucide-react';
 import { AutoInscripcionModal } from '@/components/modals/AutoInscripcionModal';
 
 const asistenciaSchema = z.object({
@@ -49,6 +49,8 @@ export default function HomePage() {
   const [autoInscripcionCursoNombre, setAutoInscripcionCursoNombre] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [wasAutoInscribed, setWasAutoInscribed] = useState(false);
+  const [ubicacionCargando, setUbicacionCargando] = useState(false);
+  const [intentosUbicacion, setIntentosUbicacion] = useState(0);
 
   const {
     register,
@@ -75,24 +77,7 @@ export default function HomePage() {
           
           // Si requiere GPS, obtener ubicación
           if (cursoData.requiereGPS) {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                setUbicacion({
-                  lat: pos.coords.latitude,
-                  lng: pos.coords.longitude
-                });
-                setUbicacionError(null);
-              },
-              (err) => {
-                console.error('Error GPS:', err);
-                setUbicacionError('No se pudo obtener ubicación. Asegurate de estar al aire libre.');
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-              }
-            );
+            obtenerUbicacion();
           }
         })
         .catch(() => {
@@ -103,6 +88,48 @@ export default function HomePage() {
         });
     }
   }, [cursoIdFromQR, setValue]);
+
+  // Función para obtener ubicación con reintentos
+  const obtenerUbicacion = () => {
+    if (!cursoFromQR?.requiereGPS) return;
+    
+    setUbicacionCargando(true);
+    setUbicacionError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUbicacion({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        });
+        setUbicacionError(null);
+        setUbicacionCargando(false);
+      },
+      (err) => {
+        console.error('Error GPS:', err);
+        setUbicacionCargando(false);
+        
+        // Detectar tipo de error de geolocalización
+        // err.code: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+        if (err.code === 1) {
+          setUbicacionError('El navegador no tiene permiso para acceder a tu ubicación. Verificá los permisos en la configuración de tu navegador/Safari/Chrome.');
+        } else if (err.code === 2) {
+          setUbicacionError('GPS no disponible. Verificá que tengas activada la ubicación en tu celular (Ajustes > Privacidad > Ubicación).');
+        } else if (err.code === 3) {
+          setUbicacionError('El GPS tardó demasiado en responder. Asegurate de estar al aire libre y tener buena señal.');
+        } else {
+          setUbicacionError('Error desconocido al obtener ubicación. Intentá nuevamente.');
+        }
+        
+        setIntentosUbicacion(prev => prev + 1);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000,  // 30 segundos para móviles
+        maximumAge: 0
+      }
+    );
+  };
 
   // Cargar lista de cursos para el selector (cuando no hay QR o como fallback)
   useEffect(() => {
@@ -218,17 +245,60 @@ export default function HomePage() {
               
               {/* Estado GPS */}
               {cursoFromQR?.requiereGPS && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4" />
-                  {ubicacion ? (
-                    <span className="text-green-600">✓ Ubicación obtenida</span>
-                  ) : (
-                    <span className="text-amber-600">Obteniendo ubicación GPS...</span>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <MapPin className="h-4 w-4" />
+                    {ubicacion ? (
+                      <span className="text-green-600 font-medium">✓ Ubicación obtenida</span>
+                    ) : ubicacionCargando ? (
+                      <span className="text-amber-600 flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Obteniendo ubicación... ({intentosUbicacion > 0 ? `Intento ${intentosUbicacion + 1}` : 'primer intento'})
+                      </span>
+                    ) : (
+                      <span className="text-red-500 font-medium">✗ Ubicación requerida</span>
+                    )}
+                  </div>
+                  
+                  {ubicacionError && (
+                    <div className="mt-2">
+                      <p className="text-sm text-red-500 mb-2">{ubicacionError}</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={obtenerUbicacion}
+                        disabled={ubicacionCargando}
+                        className="w-full"
+                      >
+                        {ubicacionCargando ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Intentando...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Reintentar obtener ubicación
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {!ubicacion && !ubicacionError && !ubicacionCargando && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={obtenerUbicacion}
+                      className="w-full mt-2"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Obtener ubicación
+                    </Button>
                   )}
                 </div>
-              )}
-              {ubicacionError && (
-                <p className="text-sm text-red-500">{ubicacionError}</p>
               )}
 
               <div className="space-y-2">
