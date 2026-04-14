@@ -26,15 +26,23 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50];
+interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
 
 interface PersonasTableProps {
   personas: Persona[];
   isLoading: boolean;
-  updateMutation: UseMutationResult<any, any, { id: number; data: Partial<Persona> }, any>;
-  deleteMutation: UseMutationResult<any, any, number, any>;
   onDeleteClick: (persona: Persona) => void;
   clientColor?: string | null;
+  meta?: PaginationMeta;
+  onPageChange?: (page: number) => void;
+  isHistorico?: boolean;
 }
 
 function getInscripcionesCount(persona: Persona): number {
@@ -51,14 +59,13 @@ function getInscripcionesCount(persona: Persona): number {
 export function PersonasTable({
   personas,
   isLoading,
-  updateMutation,
-  deleteMutation,
   onDeleteClick,
   clientColor,
+  meta,
+  onPageChange,
+  isHistorico,
 }: PersonasTableProps) {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [personaFormData, setPersonaFormData] = useState({
     nombre: '',
@@ -66,11 +73,11 @@ export function PersonasTable({
     dni: '',
   });
 
-  const totalPersonas = personas.length;
-  const totalPages = Math.ceil(totalPersonas / pageSize);
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedPersonas = personas.slice(startIndex, endIndex);
+  const handlePageChange = (newPage: number) => {
+    if (onPageChange && newPage >= 1 && newPage <= (meta?.totalPages || 1)) {
+      onPageChange(newPage);
+    }
+  };
 
   const handleEditClick = (persona: Persona) => {
     setEditingPersona(persona);
@@ -85,18 +92,10 @@ export function PersonasTable({
     setEditingPersona(null);
   };
 
-  const handleSave = (persona: Persona) => {
-    updateMutation.mutate(
-      {
-        id: persona.id,
-        data: personaFormData,
-      },
-      {
-        onSuccess: () => {
-          setEditingPersona(null);
-        },
-      }
-    );
+  // Note: Inline editing disabled - use detail view for editing
+  const handleSave = () => {
+    // Editing moved to detail view
+    setEditingPersona(null);
   };
 
   const handleViewDetail = (persona: Persona) => {
@@ -129,50 +128,16 @@ export function PersonasTable({
               </TableCell>
             </TableRow>
           ) : (
-            paginatedPersonas.map((persona) => (
+            personas.map((persona: Persona) => (
               <TableRow key={persona.id}>
-                <TableCell>
-                  {editingPersona?.id === persona.id ? (
-                    <Input
-                      value={personaFormData.nombre}
-                      onChange={(e) =>
-                        setPersonaFormData({ ...personaFormData, nombre: e.target.value })
-                      }
-                      className="w-full"
-                    />
-                  ) : (
-                    persona.nombre
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPersona?.id === persona.id ? (
-                    <Input
-                      value={personaFormData.apellido}
-                      onChange={(e) =>
-                        setPersonaFormData({ ...personaFormData, apellido: e.target.value })
-                      }
-                      className="w-full"
-                    />
-                  ) : (
-                    persona.apellido
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPersona?.id === persona.id ? (
-                    <Input
-                      value={personaFormData.dni}
-                      onChange={(e) =>
-                        setPersonaFormData({ ...personaFormData, dni: e.target.value })
-                      }
-                      className="w-full"
-                    />
-                  ) : (
-                    persona.dni
-                  )}
-                </TableCell>
+                <TableCell>{persona.nombre}</TableCell>
+                <TableCell>{persona.apellido}</TableCell>
+                <TableCell>{persona.dni}</TableCell>
                 <TableCell className="text-center">
-                  {editingPersona?.id === persona.id ? (
-                    <span className="text-gray-400">-</span>
+                  {isHistorico ? (
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+                      0
+                    </Badge>
                   ) : (
                     <Badge
                       variant={getInscripcionesCount(persona) > 0 ? 'default' : 'secondary'}
@@ -189,58 +154,24 @@ export function PersonasTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {editingPersona?.id === persona.id ? (
-                    <div className="flex gap-2">
-                      <AnimatedButton
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSave(persona)}
-                        disabled={updateMutation.isPending}
-                        className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-                      >
-                        {updateMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Guardar'
-                        )}
-                      </AnimatedButton>
-                      <AnimatedButton
-                        size="sm"
-                        variant="outline"
-                        onClick={handleCancel}
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        Cancelar
-                      </AnimatedButton>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <AnimatedButton
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleViewDetail(persona)}
-                        className="hover:bg-gray-100"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </AnimatedButton>
-                      <AnimatedButton
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditClick(persona)}
-                        className="hover:bg-gray-100"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </AnimatedButton>
-                      <AnimatedButton
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onDeleteClick(persona)}
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </AnimatedButton>
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <AnimatedButton
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewDetail(persona)}
+                      className="hover:bg-gray-100"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </AnimatedButton>
+                    <AnimatedButton
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDeleteClick(persona)}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </AnimatedButton>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
@@ -248,48 +179,29 @@ export function PersonasTable({
         </TableBody>
       </Table>
 
-      {!isLoading && totalPersonas > 0 && (
+      {meta && meta.total > 0 && (
         <div className="flex items-center justify-between px-4 py-4 border-t">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Mostrar:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(v) => {
-                setPageSize(parseInt(v));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[70px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <SelectItem key={size} value={size.toString()}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-gray-500">Total: {totalPersonas}</span>
+            <span className="text-sm text-gray-500">Total: {meta.total}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
+              onClick={() => handlePageChange(meta.page - 1)}
+              disabled={!meta.hasPrev}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm text-gray-600">
-              Página {page} de {totalPages || 1}
+              Página {meta.page} de {meta.totalPages || 1}
             </span>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(page + 1)}
-              disabled={page >= totalPages}
+              onClick={() => handlePageChange(meta.page + 1)}
+              disabled={!meta.hasNext}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
