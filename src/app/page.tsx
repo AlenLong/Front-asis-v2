@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckCircle2, GraduationCap, MapPin, RefreshCw } from 'lucide-react';
 import { AutoInscripcionModal } from '@/components/modals/AutoInscripcionModal';
+import { useDeviceId } from '@/hooks/useDeviceId';
 
 const asistenciaSchema = z.object({
   nombre: z.string().min(2, 'El nombre es requerido'),
@@ -51,6 +52,7 @@ export default function HomePage() {
   const [wasAutoInscribed, setWasAutoInscribed] = useState(false);
   const [ubicacionCargando, setUbicacionCargando] = useState(false);
   const [intentosUbicacion, setIntentosUbicacion] = useState(0);
+  const deviceId = useDeviceId();
 
   const {
     register,
@@ -185,6 +187,7 @@ export default function HomePage() {
         edicion: edicionFromQR ? parseInt(edicionFromQR) : undefined,
         lat,
         lng,
+        deviceId,
       });
 
       toast.success('Asistencia registrada correctamente');
@@ -200,7 +203,13 @@ export default function HomePage() {
 
       setShowSuccess(true);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al registrar asistencia');
+      const errorMessage = error.response?.data?.message || 'Error al registrar asistencia';
+      // Detectar error de cooldown (contiene "minutos")
+      if (errorMessage.toLowerCase().includes('minutos')) {
+        toast.error(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -366,7 +375,7 @@ export default function HomePage() {
               <Button
                 type="submit"
                 className="w-full gradient-bg hover:opacity-90"
-                disabled={isSubmitting || (cursoFromQR?.requiereGPS && !ubicacion)}
+                disabled={isSubmitting || !deviceId || (cursoFromQR?.requiereGPS && !ubicacion)}
               >
               {isSubmitting ? (
                 <>
